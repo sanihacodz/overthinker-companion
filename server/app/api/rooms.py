@@ -10,8 +10,7 @@ async def get_token(room_name: str, participant_name: str):
     api_secret = os.environ.get("LIVEKIT_API_SECRET")
     
     if not api_key or not api_secret:
-        # Mock token if keys are not ready
-        return {"token": "mock_token", "url": "wss://mock-livekit-url"}
+        raise HTTPException(status_code=500, detail="LiveKit credentials are not configured in the environment.")
 
     grants = api.VideoGrants(room_join=True, room=room_name)
     access_token = api.AccessToken(api_key, api_secret)

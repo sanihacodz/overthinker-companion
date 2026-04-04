@@ -36,9 +36,10 @@ def health_check():
 @app.post("/analyze")
 async def analyze_thought(req: AnalyzeRequest):
     try:
-        # TODO: integrate with LangGraph
         from .ai.graph import process_thought
         result = await process_thought(req.thought)
         return {"data": result}
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

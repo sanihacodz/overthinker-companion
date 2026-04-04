@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { Sparkles, BrainCircuit, Users, Globe } from 'lucide-react';
+import { Sparkles, BrainCircuit, Users, Globe, Share2 } from 'lucide-react';
 import TreeCanvas from './components/canvas/TreeCanvas';
 import Feed from './components/community/Feed';
+import VibeRoom from './components/rooms/VibeRoom';
+import { supabase } from './lib/supabase';
 
 function App() {
   const [thought, setThought] = useState('');
   const [loading, setLoading] = useState(false);
   const [treeData, setTreeData] = useState<{nodes: any[], edges: any[]} | null>(null);
   const [username, setUsername] = useState('AnxiousAxolotl_42');
-  const [activeTab, setActiveTab] = useState<'solo' | 'community'>('solo');
+  const [activeTab, setActiveTab] = useState<'solo' | 'community' | 'voice'>('solo');
 
   const handleAnalyze = async () => {
     if (!thought.trim()) return;
@@ -38,6 +40,34 @@ function App() {
     const num = Math.floor(Math.random() * 1000);
     const newName = `${adjectives[Math.floor(Math.random()*adjectives.length)]}${nouns[Math.floor(Math.random()*nouns.length)]}_${num}`;
     setUsername(newName);
+  };
+
+  const handlePublish = async () => {
+    if (!treeData) return;
+    
+    // Find the root node to extract the vibe Check
+    const rootNode = treeData.nodes.find(n => n.data.isRoot);
+    const vibeCheck = rootNode?.data.vibeCheck || 'Unknown Vibe';
+
+    try {
+      const { error } = await supabase.from('thoughts').insert([
+        {
+          author: username,
+          dilemma: thought,
+          tree_data: treeData,
+          vibe_check: vibeCheck
+        }
+      ]);
+      
+      if (error) throw error;
+      alert("Successfully published your brain-rot to the community!");
+      setActiveTab('community');
+      setTreeData(null);
+      setThought('');
+    } catch (err) {
+      console.error("Failed to publish", err);
+      alert("Failed to publish thought.");
+    }
   };
 
   return (
@@ -71,17 +101,25 @@ function App() {
           >
              {username}
           </button>
-          <button className="bg-[var(--color-neon-pink)] hover:bg-pink-600 text-white px-4 py-2 rounded-md font-semibold transition-all shadow-[0_0_15px_rgba(255,42,133,0.4)] flex items-center gap-2">
+          <button 
+            onClick={() => setActiveTab('voice')}
+            className={`bg-[var(--color-neon-pink)] hover:bg-pink-600 text-white px-4 py-2 rounded-md font-semibold transition-all shadow-[0_0_15px_rgba(255,42,133,0.4)] flex items-center gap-2 ${activeTab === 'voice' ? 'ring-2 ring-white' : ''}`}
+          >
             <Users size={16} /> Invite Vibe Check
           </button>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center overflow-y-auto">
-        {activeTab === 'community' ? (
-          <Feed />
+      <main className="flex-1 flex flex-col overflow-hidden" style={{ minHeight: 0 }}>
+        {activeTab === 'voice' ? (
+          <VibeRoom onLeave={() => setActiveTab('solo')} />
+        ) : activeTab === 'community' ? (
+          <div className="flex-1 w-full overflow-y-auto flex flex-col items-center">
+            <Feed onViewTree={(tree) => setTreeData(tree)} />
+          </div>
         ) : !treeData ? (
-          <div className="flex-1 w-full max-w-2xl flex flex-col justify-center gap-8 px-4 py-12">
+          <div className="flex-1 w-full flex flex-col items-center overflow-y-auto">
+            <div className="w-full max-w-2xl flex flex-col justify-center gap-8 px-4 py-12">
             <div className="text-center">
               <h2 className="text-4xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-neon-pink)] to-[var(--color-neon-blue)]">
                 Dump Your Brain-Rot.
@@ -106,15 +144,30 @@ function App() {
                 {loading ? 'Analyzing...' : <><Sparkles size={18} /> Solve My Overthought</>}
               </button>
             </div>
+            </div>
           </div>
         ) : (
-          <div className="w-full h-full relative">
-            <button 
-              onClick={() => setTreeData(null)}
-              className="absolute top-4 left-4 z-10 bg-white/10 hover:bg-white/20 px-4 py-2 rounded text-sm backdrop-blur transition-all"
-            >
-              ← Back to Brain Dump
-            </button>
+          <div className="flex-1 w-full relative" style={{ minHeight: 0 }}>
+            <div className="absolute top-4 left-4 z-10 flex gap-2">
+              <button 
+                onClick={() => setTreeData(null)}
+                className="bg-black/60 hover:bg-black/80 border border-white/20 backdrop-blur px-4 py-2 rounded-lg text-sm transition-all"
+              >
+                ← Back
+              </button>
+              <button 
+                onClick={handlePublish}
+                className="bg-[var(--color-neon-blue)] hover:bg-blue-600 text-[var(--color-dark-bg)] px-4 py-2 rounded-lg font-bold text-sm shadow-[0_0_10px_rgba(0,240,255,0.4)] transition-all flex items-center gap-1"
+              >
+                <Share2 size={14} /> Publish to Feed
+              </button>
+            </div>
+            {/* Hint bar */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-black/60 border border-white/10 backdrop-blur px-4 py-1.5 rounded-full text-xs text-gray-400 flex gap-4">
+              <span>🖱️ Scroll to zoom</span>
+              <span>✋ Drag to pan</span>
+              <span>🗺️ MiniMap bottom-right</span>
+            </div>
             <TreeCanvas nodes={treeData.nodes} edges={treeData.edges} />
           </div>
         )}
