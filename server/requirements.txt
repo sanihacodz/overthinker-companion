@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+langgraph
+google-genai
+supabase
+python-dotenv
+livekit
+livekit-api
+pydantic
