@@ -7,3 +7,5 @@ python-dotenv
 livekit
 livekit-api
 pydantic
+httpx
+edge-tts
